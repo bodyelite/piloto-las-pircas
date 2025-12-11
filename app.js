@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'laspircas_token_seguro';
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN; 
+const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN; 
 
 app.get('/webhook', (req, res) => {
     const mode = req.query['hub.mode'];
@@ -29,28 +29,26 @@ app.get('/webhook', (req, res) => {
 app.post('/webhook', async (req, res) => {
     const body = req.body;
 
-    if (body.object) {
-        if (body.entry && 
-            body.entry[0].changes && 
-            body.entry[0].changes[0].value.messages && 
-            body.entry[0].changes[0].value.messages[0]) {
-
-            const messageObj = body.entry[0].changes[0].value.messages[0];
-            const from = messageObj.from;
-            const msgBody = messageObj.text ? messageObj.text.body.toLowerCase() : '';
-            const msgId = messageObj.id;
-
-            console.log(`Mensaje de ${from}: ${msgBody}`);
-
-            await processMessage(from, msgBody, msgId);
+    if (body.object === 'instagram') {
+        for (const entry of body.entry) {
+            if (entry.messaging) {
+                const webhookEvent = entry.messaging[0];
+                const senderId = webhookEvent.sender.id;
+                
+                if (webhookEvent.message && webhookEvent.message.text) {
+                    const text = webhookEvent.message.text.toLowerCase();
+                    console.log(`Mensaje IG de ${senderId}: ${text}`);
+                    await processMessage(senderId, text);
+                }
+            }
         }
-        res.sendStatus(200);
+        res.status(200).send('EVENT_RECEIVED');
     } else {
         res.sendStatus(404);
     }
 });
 
-async function processMessage(to, text, messageId) {
+async function processMessage(senderId, text) {
     let reply = kb.defaultResponse;
     
     for (const service of kb.services) {
@@ -61,28 +59,24 @@ async function processMessage(to, text, messageId) {
     }
 
     try {
-        await sendMessage(to, reply);
+        await sendMessage(senderId, reply);
     } catch (error) {
-        console.error('Error:', error.message);
+        console.error('Error IG:', error.response ? error.response.data : error.message);
     }
 }
 
-async function sendMessage(to, text) {
-    if (!WHATSAPP_TOKEN) return console.log("Simulación (No Token):", text);
+async function sendMessage(senderId, text) {
+    if (!PAGE_ACCESS_TOKEN) return console.log("NO TOKEN:", text);
 
     await axios({
         method: 'POST',
-        url: `https://graph.facebook.com/v17.0/753706897835148/messages`,
-        headers: {
-            'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
-            'Content-Type': 'application/json'
-        },
+        url: `https://graph.facebook.com/v19.0/me/messages`,
+        params: { access_token: PAGE_ACCESS_TOKEN },
         data: {
-            messaging_product: 'whatsapp',
-            to: to,
-            text: { body: text }
+            recipient: { id: senderId },
+            message: { text: text }
         }
     });
 }
 
-app.listen(PORT, () => console.log(`Strip Las Pircas Bot corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Bot IG corriendo en puerto ${PORT}`));
