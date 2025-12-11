@@ -28,8 +28,16 @@ app.get('/webhook', (req, res) => {
 
 app.post('/webhook', async (req, res) => {
     const body = req.body;
+    
+    // --- DIAGNÓSTICO: ESTA LÍNEA MOSTRARÁ TODO LO QUE LLEGUE ---
+    console.log("📨 ¡LLEGÓ ALGO!", JSON.stringify(body, null, 2));
+    // ------------------------------------------------------------
 
-    if (body.object === 'instagram') {
+    // Soporte para ambos formatos (Instagram Product y Messenger Product)
+    const isInstagram = body.object === 'instagram';
+    const isPage = body.object === 'page';
+
+    if (isInstagram || isPage) {
         for (const entry of body.entry) {
             if (entry.messaging) {
                 const webhookEvent = entry.messaging[0];
@@ -37,13 +45,14 @@ app.post('/webhook', async (req, res) => {
                 
                 if (webhookEvent.message && webhookEvent.message.text) {
                     const text = webhookEvent.message.text.toLowerCase();
-                    console.log(`Mensaje IG de ${senderId}: ${text}`);
+                    console.log(`✅ Mensaje procesado de ${senderId}: ${text}`);
                     await processMessage(senderId, text);
                 }
             }
         }
         res.status(200).send('EVENT_RECEIVED');
     } else {
+        console.log("⚠️ Recibido pero no es formato Instagram/Page reconocido");
         res.sendStatus(404);
     }
 });
@@ -61,7 +70,7 @@ async function processMessage(senderId, text) {
     try {
         await sendMessage(senderId, reply);
     } catch (error) {
-        console.error('Error IG:', error.response ? error.response.data : error.message);
+        console.error('❌ Error enviando:', error.response ? error.response.data : error.message);
     }
 }
 
@@ -79,4 +88,4 @@ async function sendMessage(senderId, text) {
     });
 }
 
-app.listen(PORT, () => console.log(`Bot IG corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Bot Diagnóstico corriendo en puerto ${PORT}`));
