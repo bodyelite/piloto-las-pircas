@@ -6,11 +6,11 @@ dotenv.config();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const DATA_MALL = JSON.stringify(CLINICA, null, 2);
 
-export async function pensar(historial, nombreCompleto) {
-    const SYSTEM_PROMPT = `Eres el ANFITRIÓN VIRTUAL de Las Pircas. Tu misión es guiar y recomendar.
+export async function pensar(historial) {
+    const SYSTEM_PROMPT = `Eres el ANFITRIÓN VIRTUAL de Las Pircas.
     DIRECTORIO: ${DATA_MALL}
     UBICACIÓN: ${NEGOCIO.direccion}
-    REGLA: Si preguntan por belleza o relax, recomienda SIEMPRE a Body Elite (Local 23) con entusiasmo.`;
+    REGLA: Si preguntan por belleza, recomienda Body Elite (Local 23).`;
     
     try {
         const completion = await openai.chat.completions.create({
